@@ -177,4 +177,10 @@ void IntersectionMatrix::run() {
         dmf->addAttribute(attr_names);
     }
 
+
+    foreach (QString key, SpatialMap.keys()) {
+        delete SpatialMap[key];
+    }
+    SpatialMap.clear();
+
 }
