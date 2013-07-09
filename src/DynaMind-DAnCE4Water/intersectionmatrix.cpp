@@ -143,7 +143,7 @@ void IntersectionMatrix::run() {
             }
             Face * f_intersected = tmp_sys.addFace(nodes);
 
-            double a_tmp = fabs(TBVectorData::calculateArea(&tmp_sys, f_intersected));
+            double a_tmp = fabs(TBVectorData::CalculateArea(&tmp_sys, f_intersected));
             area_tot += a_tmp;
             linksnames.push_back(idmf->getUUID());
             percentages.push_back(a_tmp/idmf->getAttribute("area")->getDouble());
