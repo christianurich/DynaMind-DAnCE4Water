@@ -6,7 +6,7 @@
  *
  * This file is part of DynaMind
  *
- * Copyright (C) 2011  Christian Urich
+ * Copyright (C) 2013  Christian Urich
 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,22 +23,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
-#include "dmnodefactory.h"
-#include "dmmoduleregistry.h"
-#include "intersectionmatrix.h"
-#include "assignattributes.h"
-#include "createblocknetwork.h"
-#include "searchneighbourhood.h"
 
 
-using namespace std;
+#ifndef SEARCHNEIGHBOURHOOD_H
+#define SEARCHNEIGHBOURHOOD_H
+
+#include <dmmodule.h>
+#include <dm.h>
+
+class DM_HELPER_DLL_EXPORT SearchNeighbourhood : public DM::Module
+{
+    DM_DECLARE_NODE(SearchNeighbourhood)
+public:
+    SearchNeighbourhood();
+    void run();
+    void init();
 
 
+private:
+     std::string blockNames;
+     std::string edgeNames;
+     bool isEdgeBased;
 
-extern "C" void DM_HELPER_DLL_EXPORT  registerModules(DM::ModuleRegistry *registry) {
-    registry->addNodeFactory(new DM::NodeFactory<IntersectionMatrix>());
-    registry->addNodeFactory(new DM::NodeFactory<AssignAttributes>());
-    registry->addNodeFactory(new DM::NodeFactory<CreateBlockNetwork>());
-    registry->addNodeFactory(new DM::NodeFactory<SearchNeighbourhood>());
-}
+     DM::View vBlock;
+     DM::View vEdge;
+};
 
+#endif // SEARCHNEIGHBOURHOOD_H
