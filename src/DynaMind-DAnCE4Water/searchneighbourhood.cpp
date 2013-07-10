@@ -67,19 +67,69 @@ void SearchNeighbourhood::run()
     DM::System * sys = this->getData("city");
 
     std::vector<std::string> edge_uuids = sys->getUUIDs(vEdge);
-    foreach(std::string e_uuid, edge_uuids) {
-        DM::Component * e = sys->getComponent(e_uuid);
-        std::vector<DM::LinkAttribute> links =  e->getAttribute(vBlock.getName())->getLinks();
-        foreach(DM::LinkAttribute f, links) {
-            DM::Component * b = sys->getComponent(f.uuid);
-            foreach(DM::LinkAttribute l, links) {
-                if (b->getUUID() == l.uuid) continue;
-                b->getAttribute("neighbourhood")->setLink(vBlock.getName(), l.uuid);
-                b->addAttribute("neighbours", b->getAttribute("neighbours")->getDouble() + 1);
+    //Newman
+    if (this->isEdgeBased) {
+        foreach(std::string e_uuid, edge_uuids) {
+            DM::Component * e = sys->getComponent(e_uuid);
+            std::vector<DM::LinkAttribute> links =  e->getAttribute(vBlock.getName())->getLinks();
+            foreach(DM::LinkAttribute f, links) {
+                DM::Component * b = sys->getComponent(f.uuid);
+                foreach(DM::LinkAttribute l, links) {
+                    if (b->getUUID() == l.uuid) continue;
+                    b->getAttribute("neighbourhood")->setLink(vBlock.getName(), l.uuid);
+                    b->addAttribute("neighbours", b->getAttribute("neighbours")->getDouble() + 1);
+                }
             }
         }
+        return;
+    }
+    //NodeBased
+
+    typedef std::set<DM::Component*> component_set;
+
+    std::map<DM::Node* , component_set > inBlocks;
+
+    foreach(std::string e_uuid, edge_uuids) {
+        DM::Edge * e = sys->getEdge(e_uuid);
+
+        component_set in = inBlocks[e->getStartNode()];
+        std::vector<DM::LinkAttribute> links =  e->getAttribute(vBlock.getName())->getLinks();
+        foreach (DM::LinkAttribute l, links) in.insert(sys->getComponent(l.uuid));
+        inBlocks[e->getStartNode()] = in;
+
+        in = inBlocks[e->getEndNode()];
+        links =  e->getAttribute(vBlock.getName())->getLinks();
+        foreach (DM::LinkAttribute l, links) in.insert(sys->getComponent(l.uuid));
+        inBlocks[e->getEndNode()] = in;
     }
 
+    //Figure out Neighbours
+    std::map<DM::Component*, component_set> neighbourhoods;
+
+    for (std::map<DM::Node* , component_set >::const_iterator it = inBlocks.begin();
+         it != inBlocks.end();
+         ++it ) {
+        foreach( DM::Component * b, it->second) {
+            component_set neigh = neighbourhoods[b];
+            foreach (DM::Component * n, it->second) {
+                neigh.insert(n);
+            }
+            neighbourhoods[b] = neigh;
+        }
+    }
+    //Finally add  Neighbours
+
+    for (std::map<DM::Component*, component_set>::const_iterator it = neighbourhoods.begin();
+         it != neighbourhoods.end();
+         ++it ) {
+
+        DM::Component * b = it->first;
+        foreach( DM::Component * n, it->second) {
+            if (n == b) continue;
+            b->getAttribute("neighbourhood")->setLink(vBlock.getName(), n->getUUID());
+            b->addAttribute("neighbours", b->getAttribute("neighbours")->getDouble() + 1);
+        }
+    }
 }
 
 
