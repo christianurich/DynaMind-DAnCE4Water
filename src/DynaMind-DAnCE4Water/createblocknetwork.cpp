@@ -53,6 +53,7 @@ void CreateBlockNetwork::init()
     vBlock = DM::View(blockNames, DM::COMPONENT, DM::READ);
     vBlock.getAttribute("neighbourhood");
     vCenter = DM::View(centerNames, DM::NODE, DM::READ);
+
     vEdge = DM::View(edgeNames, DM::EDGE, DM::WRITE);
 
     datastream.push_back(vBlock);
@@ -77,7 +78,6 @@ void CreateBlockNetwork::run()
 
         //Link Center of current block with all other blocks linked to this baby
         foreach (DM::LinkAttribute lBlock, block->getAttribute("neighbourhood")->getLinks()) {
-            DM::Logger(DM::Standard) << "huh";
             DM::Component * nblock = city->getComponent(lBlock.uuid);
             DM::LinkAttribute lNeigh = nblock->getAttribute(vCenter.getName())->getLink();
             DM::Node * endNode = city->getNode(lNeigh.uuid);
@@ -87,11 +87,10 @@ void CreateBlockNetwork::run()
             if (connectedBlocks.find(otherSide) != connectedBlocks.end()) continue;
 
             city->addEdge(startNode, endNode, vEdge);
+
             std::pair<std::string, std::string> thisSide (startNode->getUUID(),endNode->getUUID());
             connectedBlocks.insert(thisSide);
-
         }
-
     }
 
 }
