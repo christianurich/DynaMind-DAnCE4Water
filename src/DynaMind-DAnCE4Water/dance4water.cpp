@@ -29,6 +29,7 @@
 #include "assignattributes.h"
 #include "createblocknetwork.h"
 #include "searchneighbourhood.h"
+#include "gravitydrivennetwork.h"
 
 
 using namespace std;
@@ -40,5 +41,6 @@ extern "C" void DM_HELPER_DLL_EXPORT  registerModules(DM::ModuleRegistry *regist
     registry->addNodeFactory(new DM::NodeFactory<AssignAttributes>());
     registry->addNodeFactory(new DM::NodeFactory<CreateBlockNetwork>());
     registry->addNodeFactory(new DM::NodeFactory<SearchNeighbourhood>());
+    registry->addNodeFactory(new DM::NodeFactory<GravityDrivenNetwork>());
 }
 
