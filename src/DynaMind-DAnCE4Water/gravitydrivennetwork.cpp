@@ -34,10 +34,12 @@ GravityDrivenNetwork::GravityDrivenNetwork()
     NameInputEdges = "BLOCK_NETWORK";
     NameInputNodes = "BLOCK_CENTER";
     NameOutputNetwork = "BLOCK_DRAINAGE_NETWORK";
+    extendedSearch = 1;
 
     this->addParameter("NameInputEdges", DM::STRING, &this->NameInputEdges);
     this->addParameter("NameInputNodes", DM::STRING, &this->NameInputNodes);
     this->addParameter("NameOutputNetwork", DM::STRING, &this->NameOutputNetwork);
+    this->addParameter("ExtendSerachRadius", DM::INT, &this->extendedSearch);
 
     std::vector<DM::View> datastream;
     datastream.push_back(DM::View("dummy", DM::SUBSYSTEM, DM::MODIFY));
@@ -63,6 +65,8 @@ void GravityDrivenNetwork::init()
 
     this->addData("city", datastream);
 }
+
+
 
 void GravityDrivenNetwork::run()
 {
@@ -100,25 +104,19 @@ void GravityDrivenNetwork::run()
         while (n) {
             //get all connected nodes
             std::set<DM::Node *> connectedNodes = startNodeList[n];
-            //DM::Logger(DM::Standard) << connectedNodes.size();
             if (connectedNodes.size() == 0) {
                 n = 0;
                 continue;
             }
-            double nextAttr = currentAttr;
-            DM::Node * nextNode = 0;
-
-            foreach (DM::Node * candidateNode, connectedNodes) {
-                double candAttr = candidateNode->getAttribute("attractor")->getDouble();
-                if (candAttr > nextAttr) {
-                    nextAttr = candAttr;
-                    nextNode = candidateNode;
-                }
-            }
+            DM::Node * nextNode = identifyNode(currentAttr, connectedNodes);
 
             if (!nextNode) {
-                n = 0;
-                continue;
+                //extended search
+                nextNode = extendSearchRadius(startNodeList,extendedSearch,  connectedNodes , currentAttr);
+                if (!nextNode) {
+                    n = 0;
+                    continue;
+                }
             }
             std::pair<DM::Node*, DM::Node*> con(n, nextNode);
             if (newconnections.find(con) != newconnections.end()) {
@@ -129,8 +127,9 @@ void GravityDrivenNetwork::run()
             city->addEdge(n, nextNode, vOutputNetwork);
             newconnections.insert(con);
 
-            currentAttr = nextAttr;
+
             n = nextNode;
+            currentAttr = n->getAttribute("attractor")->getDouble();
         }
 
 
@@ -139,3 +138,37 @@ void GravityDrivenNetwork::run()
 
 }
 
+DM::Node *  GravityDrivenNetwork::extendSearchRadius(std::map<DM::Node * , std::set<DM::Node *> >&  startNodeList, int radius, std::set<DM::Node * > & candidateNodes,  double currentAttr)
+{
+
+    for (int i = 0; i < radius; i++) {
+        std::set<DM::Node * > newCandidates;
+        foreach (DM::Node * n, candidateNodes) {
+            foreach (DM::Node * c, startNodeList[n]) {
+                newCandidates.insert(c);
+            }
+        }
+        foreach (DM::Node * c, newCandidates) {
+            candidateNodes.insert(c);
+        }
+        DM::Node * n = identifyNode(currentAttr, candidateNodes);
+        if (n) {
+            return n;
+        }
+
+    }
+    return 0;
+}
+
+DM::Node * GravityDrivenNetwork::identifyNode( double currentAttr, const std::set<DM::Node *> & connectedNodes)
+{
+    DM::Node * newNode = 0;
+    foreach (DM::Node * candidateNode, connectedNodes) {
+        double candAttr = candidateNode->getAttribute("attractor")->getDouble();
+        if (candAttr > currentAttr) {
+            currentAttr = candAttr;
+            newNode = candidateNode;
+        }
+    }
+    return newNode;
+}

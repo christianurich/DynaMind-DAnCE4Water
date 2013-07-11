@@ -37,16 +37,20 @@ public:
     GravityDrivenNetwork();
     void init();
     void run();
+
+
 private:
      std::string NameInputEdges;
      std::string NameInputNodes;
      std::string NameOutputNetwork;
+     int extendedSearch;
 
      DM::View vInputEdges;
      DM::View vInputNodes;
      DM::View vOutputNetwork;
 
-
+     DM::Node * identifyNode(double currentAttr, const std::set<DM::Node *> &connectedNodes);
+     DM::Node * extendSearchRadius(std::map<DM::Node * , std::set<DM::Node *> >&  startNodeList, int radius, std::set<DM::Node * > & candidateNodes, double nextAttr);
 };
 
 #endif // GRAVITYDRIVENNETWORK_H
