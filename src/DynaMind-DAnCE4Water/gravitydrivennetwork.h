@@ -37,6 +37,7 @@ public:
     GravityDrivenNetwork();
     void init();
     void run();
+    std::string getHelpUrl();
 
 
 private:

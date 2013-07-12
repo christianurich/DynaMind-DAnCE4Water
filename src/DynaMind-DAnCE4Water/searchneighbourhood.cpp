@@ -62,6 +62,11 @@ void SearchNeighbourhood::init()
     this->addData("city", datastream);
 }
 
+string SearchNeighbourhood::getHelpUrl()
+{
+    return "https://github.com/iut-ibk/DynaMind-ToolBox/wiki/Searchneighbourhood";
+}
+
 void SearchNeighbourhood::run()
 {
     DM::System * sys = this->getData("city");

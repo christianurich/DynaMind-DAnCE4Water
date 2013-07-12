@@ -64,6 +64,11 @@ void CreateBlockNetwork::init()
 
 }
 
+string CreateBlockNetwork::getHelpUrl()
+{
+    return "https://github.com/iut-ibk/DynaMind-ToolBox/wiki/Createblocknetwork";
+}
+
 void CreateBlockNetwork::run()
 {
     DM::System * city = this->getData("city");

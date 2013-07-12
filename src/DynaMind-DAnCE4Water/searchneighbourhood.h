@@ -38,7 +38,7 @@ public:
     SearchNeighbourhood();
     void run();
     void init();
-
+    std::string getHelpUrl();
 
 private:
      std::string blockNames;
