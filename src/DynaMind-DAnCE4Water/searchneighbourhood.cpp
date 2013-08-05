@@ -64,7 +64,7 @@ void SearchNeighbourhood::init()
 
 string SearchNeighbourhood::getHelpUrl()
 {
-    return "https://github.com/iut-ibk/DynaMind-ToolBox/wiki/Searchneighbourhood";
+    return "https://github.com/christianurich/DynaMind-DAnCE4Water/blob/master/doc/SearchNeighbourhood.md";
 }
 
 void SearchNeighbourhood::run()

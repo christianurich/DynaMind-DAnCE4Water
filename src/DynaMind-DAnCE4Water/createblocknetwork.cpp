@@ -66,7 +66,7 @@ void CreateBlockNetwork::init()
 
 string CreateBlockNetwork::getHelpUrl()
 {
-    return "https://github.com/iut-ibk/DynaMind-ToolBox/wiki/Createblocknetwork";
+    return "https://github.com/christianurich/DynaMind-DAnCE4Water/blob/master/doc/CreateBlockNetwork.md";
 }
 
 void CreateBlockNetwork::run()

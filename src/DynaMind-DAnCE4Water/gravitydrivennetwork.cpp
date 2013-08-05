@@ -140,7 +140,7 @@ void GravityDrivenNetwork::run()
 
 string GravityDrivenNetwork::getHelpUrl()
 {
-    return "https://github.com/iut-ibk/DynaMind-ToolBox/wiki/Gravitydrivennetwork";
+    return "https://github.com/christianurich/DynaMind-DAnCE4Water/blob/master/doc/GravityDrivenNetwork.md";
 }
 
 DM::Node *  GravityDrivenNetwork::extendSearchRadius(std::map<DM::Node * , std::set<DM::Node *> >&  startNodeList, int radius, std::set<DM::Node * > & candidateNodes,  double currentAttr)
