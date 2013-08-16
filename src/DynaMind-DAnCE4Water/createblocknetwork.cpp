@@ -51,7 +51,8 @@ void CreateBlockNetwork::init()
     std::vector<DM::View> datastream;
 
     vBlock = DM::View(blockNames, DM::COMPONENT, DM::READ);
-    vBlock.getAttribute("neighbourhood");
+	vBlock.getAttribute("neighbourhood");
+	vBlock.getAttribute(centerNames);
     vCenter = DM::View(centerNames, DM::NODE, DM::READ);
 
     vEdge = DM::View(edgeNames, DM::EDGE, DM::WRITE);
