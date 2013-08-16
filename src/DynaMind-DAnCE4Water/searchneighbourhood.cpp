@@ -77,10 +77,13 @@ void SearchNeighbourhood::run()
         foreach(std::string e_uuid, edge_uuids) {
             DM::Component * e = sys->getComponent(e_uuid);
             std::vector<DM::LinkAttribute> links =  e->getAttribute(vBlock.getName())->getLinks();
+			DM::Logger(DM::Debug) << "Neighbours" << links.size();
             foreach(DM::LinkAttribute f, links) {
+				DM::Logger(DM::Debug) << "Neighbour uuid" << f.uuid;
                 DM::Component * b = sys->getComponent(f.uuid);
                 foreach(DM::LinkAttribute l, links) {
                     if (b->getUUID() == l.uuid) continue;
+					DM::Logger(DM::Debug) << "Link found";
                     b->getAttribute("neighbourhood")->setLink(vBlock.getName(), l.uuid);
                     b->addAttribute("neighbours", b->getAttribute("neighbours")->getDouble() + 1);
                 }
