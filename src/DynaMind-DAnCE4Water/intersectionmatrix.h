@@ -36,19 +36,19 @@ using namespace DM;
 
 class DM_HELPER_DLL_EXPORT IntersectionMatrix :public Module
 {
-    DM_DECLARE_NODE(IntersectionMatrix)
-private:
-        DM::View base;
-        DM::View intersects;
-        void initSpatialMap();
-         QHash<QString, std::vector<DM::Face* > * > SpatialMap;
-         DM::System * city;
-         int gridSize;
-         QString createHash(int ix, int iy);
-         std::set<DM::Face*> getFacesInArea(Face * f );
+	DM_DECLARE_NODE(IntersectionMatrix)
+	private:
+		DM::View base;
+	DM::View intersects;
+	void initSpatialMap();
+	QHash<QString, std::vector<DM::Face* > * > SpatialMap;
+	DM::System * city;
+	int gridSize;
+	QString createHash(int ix, int iy);
+	std::set<DM::Face*> getFacesInArea(Face * f );
 public:
-    IntersectionMatrix();
-    void run();
+	IntersectionMatrix();
+	void run();
 };
 
 #endif // INTERSECTIONMATRIX_H

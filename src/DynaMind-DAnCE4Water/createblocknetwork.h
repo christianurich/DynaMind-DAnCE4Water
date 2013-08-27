@@ -32,21 +32,21 @@
 
 class DM_HELPER_DLL_EXPORT CreateBlockNetwork : public DM::Module
 {
-     DM_DECLARE_NODE(CreateBlockNetwork)
-public:
-     CreateBlockNetwork();
-     void run();
-     void init();
-     std::string getHelpUrl();
+	DM_DECLARE_NODE(CreateBlockNetwork)
+	public:
+		CreateBlockNetwork();
+	void run();
+	void init();
+	std::string getHelpUrl();
 
 private:
-     std::string blockNames;
-     std::string centerNames;
-     std::string edgeNames;
+	std::string blockNames;
+	std::string centerNames;
+	std::string edgeNames;
 
-     DM::View vBlock;
-     DM::View vCenter;
-     DM::View vEdge;
+	DM::View vBlock;
+	DM::View vCenter;
+	DM::View vEdge;
 
 
 };

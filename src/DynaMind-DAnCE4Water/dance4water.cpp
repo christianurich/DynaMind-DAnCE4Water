@@ -37,10 +37,10 @@ using namespace std;
 
 
 extern "C" void DM_HELPER_DLL_EXPORT  registerModules(DM::ModuleRegistry *registry) {
-    registry->addNodeFactory(new DM::NodeFactory<IntersectionMatrix>());
-    registry->addNodeFactory(new DM::NodeFactory<AssignAttributes>());
-    registry->addNodeFactory(new DM::NodeFactory<CreateBlockNetwork>());
-    registry->addNodeFactory(new DM::NodeFactory<SearchNeighbourhood>());
-    registry->addNodeFactory(new DM::NodeFactory<GravityDrivenNetwork>());
+	registry->addNodeFactory(new DM::NodeFactory<IntersectionMatrix>());
+	registry->addNodeFactory(new DM::NodeFactory<AssignAttributes>());
+	registry->addNodeFactory(new DM::NodeFactory<CreateBlockNetwork>());
+	registry->addNodeFactory(new DM::NodeFactory<SearchNeighbourhood>());
+	registry->addNodeFactory(new DM::NodeFactory<GravityDrivenNetwork>());
 }
 

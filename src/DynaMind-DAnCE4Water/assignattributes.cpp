@@ -30,43 +30,43 @@ DM_DECLARE_NODE_NAME(AssignAttributes, DAnCE4Water)
 
 AssignAttributes::AssignAttributes()
 {
-    n_attriubte = "";
-    this->addParameter("Attribute", DM::STRING, &this->n_attriubte);
-    base = DM::View("Base", DM::FACE, DM::READ);
-    base.getAttribute("area");
-    intersects = DM::View("Intersect", DM::FACE, DM::READ);
-    intersects.getAttribute("Percentage");
-    intersects.getAttribute("Percentage_UUIDs");
-    std::vector<DM::View> data;
-    data.push_back(intersects);
-    data.push_back(base);
-    this->addData("City", data);
+	n_attriubte = "";
+	this->addParameter("Attribute", DM::STRING, &this->n_attriubte);
+	base = DM::View("Base", DM::FACE, DM::READ);
+	base.getAttribute("area");
+	intersects = DM::View("Intersect", DM::FACE, DM::READ);
+	intersects.getAttribute("Percentage");
+	intersects.getAttribute("Percentage_UUIDs");
+	std::vector<DM::View> data;
+	data.push_back(intersects);
+	data.push_back(base);
+	this->addData("City", data);
 }
 void AssignAttributes::init() {
-    if (n_attriubte.empty())
-        return;
-    intersects.addAttribute(n_attriubte);
-    base.getAttribute(n_attriubte);
-    std::vector<DM::View> data;
-    data.push_back(intersects);
-    data.push_back(base);
-    this->addData("City", data);
+	if (n_attriubte.empty())
+		return;
+	intersects.addAttribute(n_attriubte);
+	base.getAttribute(n_attriubte);
+	std::vector<DM::View> data;
+	data.push_back(intersects);
+	data.push_back(base);
+	this->addData("City", data);
 }
 
 void AssignAttributes::run() {
-    DM::System * city = this->getData("City");
-    std::vector<std::string> uuids = city->getUUIDsOfComponentsInView(intersects);
+	DM::System * city = this->getData("City");
+	std::vector<std::string> uuids = city->getUUIDsOfComponentsInView(intersects);
 
-    foreach (std::string uuid, uuids) {
-        double val_tot = 0;
-        DM::Face * f = city->getFace(uuid);
-        std::vector<std::string> b_uuids = f->getAttribute("Percentage_UUIDs")->getStringVector();
-        std::vector<double> b_pers = f->getAttribute("Percentage")->getDoubleVector();
-        for (int i = 0; i < b_uuids.size(); i++) {
-            DM::Face * bf = city->getFace(b_uuids[i]);
-            double attr_val = bf->getAttribute(n_attriubte)->getDouble();
-            val_tot += attr_val * b_pers[i];
-        }
-        f->addAttribute(n_attriubte,val_tot);
-    }
+	foreach (std::string uuid, uuids) {
+		double val_tot = 0;
+		DM::Face * f = city->getFace(uuid);
+		std::vector<std::string> b_uuids = f->getAttribute("Percentage_UUIDs")->getStringVector();
+		std::vector<double> b_pers = f->getAttribute("Percentage")->getDoubleVector();
+		for (int i = 0; i < b_uuids.size(); i++) {
+			DM::Face * bf = city->getFace(b_uuids[i]);
+			double attr_val = bf->getAttribute(n_attriubte)->getDouble();
+			val_tot += attr_val * b_pers[i];
+		}
+		f->addAttribute(n_attriubte,val_tot);
+	}
 }

@@ -33,20 +33,20 @@
 
 class DM_HELPER_DLL_EXPORT SearchNeighbourhood : public DM::Module
 {
-    DM_DECLARE_NODE(SearchNeighbourhood)
-public:
-    SearchNeighbourhood();
-    void run();
-    void init();
-    std::string getHelpUrl();
+	DM_DECLARE_NODE(SearchNeighbourhood)
+	public:
+		SearchNeighbourhood();
+	void run();
+	void init();
+	std::string getHelpUrl();
 
 private:
-     std::string blockNames;
-     std::string edgeNames;
-     bool isEdgeBased;
+	std::string blockNames;
+	std::string edgeNames;
+	bool isEdgeBased;
 
-     DM::View vBlock;
-     DM::View vEdge;
+	DM::View vBlock;
+	DM::View vEdge;
 };
 
 #endif // SEARCHNEIGHBOURHOOD_H

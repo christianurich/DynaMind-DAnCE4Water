@@ -34,15 +34,15 @@ using namespace DM;
 
 class DM_HELPER_DLL_EXPORT AssignAttributes : public Module
 {
-    DM_DECLARE_NODE(AssignAttributes)
-private:
-        DM::View base;
-        DM::View intersects;
-        std::string n_attriubte;
+	DM_DECLARE_NODE(AssignAttributes)
+	private:
+		DM::View base;
+	DM::View intersects;
+	std::string n_attriubte;
 public:
-    AssignAttributes();
-    void run();
-    void init();
+	AssignAttributes();
+	void run();
+	void init();
 };
 
 #endif // ASSIGNATTRIBUTES_H

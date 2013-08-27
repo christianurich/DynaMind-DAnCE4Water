@@ -30,74 +30,74 @@ DM_DECLARE_NODE_NAME(CreateBlockNetwork, DAnCE4Water)
 
 CreateBlockNetwork::CreateBlockNetwork()
 {
-    blockNames = "BLOCK";
-    centerNames = "BLOCK_CENTER";
-    edgeNames = "BLOCK_NETWORK";
+	blockNames = "BLOCK";
+	centerNames = "BLOCK_CENTER";
+	edgeNames = "BLOCK_NETWORK";
 
-    this->addParameter("BlockNames", DM::STRING, &this->blockNames);
-    this->addParameter("CenterNames", DM::STRING, &this->centerNames);
-    this->addParameter("EdgeNames", DM::STRING, &this->edgeNames);
+	this->addParameter("BlockNames", DM::STRING, &this->blockNames);
+	this->addParameter("CenterNames", DM::STRING, &this->centerNames);
+	this->addParameter("EdgeNames", DM::STRING, &this->edgeNames);
 
 
-    std::vector<DM::View> datastream;
-    datastream.push_back(DM::View("dummy", DM::SUBSYSTEM, DM::MODIFY));
+	std::vector<DM::View> datastream;
+	datastream.push_back(DM::View("dummy", DM::SUBSYSTEM, DM::MODIFY));
 
-    this->addData("city", datastream);
+	this->addData("city", datastream);
 }
 
 void CreateBlockNetwork::init()
 {
 
-    std::vector<DM::View> datastream;
+	std::vector<DM::View> datastream;
 
-    vBlock = DM::View(blockNames, DM::COMPONENT, DM::READ);
+	vBlock = DM::View(blockNames, DM::COMPONENT, DM::READ);
 	vBlock.getAttribute("neighbourhood");
 	vBlock.getAttribute(centerNames);
-    vCenter = DM::View(centerNames, DM::NODE, DM::READ);
+	vCenter = DM::View(centerNames, DM::NODE, DM::READ);
 
-    vEdge = DM::View(edgeNames, DM::EDGE, DM::WRITE);
+	vEdge = DM::View(edgeNames, DM::EDGE, DM::WRITE);
 
-    datastream.push_back(vBlock);
-    datastream.push_back(vCenter);
-    datastream.push_back(vEdge);
+	datastream.push_back(vBlock);
+	datastream.push_back(vCenter);
+	datastream.push_back(vEdge);
 
-    this->addData("city", datastream);
+	this->addData("city", datastream);
 
 }
 
 string CreateBlockNetwork::getHelpUrl()
 {
-    return "https://github.com/christianurich/DynaMind-DAnCE4Water/blob/master/doc/CreateBlockNetwork.md";
+	return "https://github.com/christianurich/DynaMind-DAnCE4Water/blob/master/doc/CreateBlockNetwork.md";
 }
 
 void CreateBlockNetwork::run()
 {
-    DM::System * city = this->getData("city");
-    std::vector<std::string> uuids = city->getUUIDs(vBlock);
-    std::set<std::pair<std::string, std::string > > connectedBlocks;
+	DM::System * city = this->getData("city");
+	std::vector<std::string> uuids = city->getUUIDs(vBlock);
+	std::set<std::pair<std::string, std::string > > connectedBlocks;
 
-    foreach (std::string uuid, uuids) {
-        DM::Component * block = city->getComponent(uuid);
+	foreach (std::string uuid, uuids) {
+		DM::Component * block = city->getComponent(uuid);
 
-        DM::LinkAttribute lCenter = block->getAttribute(vCenter.getName())->getLink();
-        DM::Node * startNode = city->getNode(lCenter.uuid);
+		DM::LinkAttribute lCenter = block->getAttribute(vCenter.getName())->getLink();
+		DM::Node * startNode = city->getNode(lCenter.uuid);
 
-        //Link Center of current block with all other blocks linked to this baby
-        foreach (DM::LinkAttribute lBlock, block->getAttribute("neighbourhood")->getLinks()) {
-            DM::Component * nblock = city->getComponent(lBlock.uuid);
-            DM::LinkAttribute lNeigh = nblock->getAttribute(vCenter.getName())->getLink();
-            DM::Node * endNode = city->getNode(lNeigh.uuid);
-            //Check if connected from other side
-            std::pair<std::string, std::string> otherSide (endNode->getUUID(),startNode->getUUID());
+		//Link Center of current block with all other blocks linked to this baby
+		foreach (DM::LinkAttribute lBlock, block->getAttribute("neighbourhood")->getLinks()) {
+			DM::Component * nblock = city->getComponent(lBlock.uuid);
+			DM::LinkAttribute lNeigh = nblock->getAttribute(vCenter.getName())->getLink();
+			DM::Node * endNode = city->getNode(lNeigh.uuid);
+			//Check if connected from other side
+			std::pair<std::string, std::string> otherSide (endNode->getUUID(),startNode->getUUID());
 
-            if (connectedBlocks.find(otherSide) != connectedBlocks.end()) continue;
+			if (connectedBlocks.find(otherSide) != connectedBlocks.end()) continue;
 
-            city->addEdge(startNode, endNode, vEdge);
+			city->addEdge(startNode, endNode, vEdge);
 
-            std::pair<std::string, std::string> thisSide (startNode->getUUID(),endNode->getUUID());
-            connectedBlocks.insert(thisSide);
-        }
-    }
+			std::pair<std::string, std::string> thisSide (startNode->getUUID(),endNode->getUUID());
+			connectedBlocks.insert(thisSide);
+		}
+	}
 
 }
 
