@@ -15,7 +15,9 @@ public:
 	MelbourneStyleBuilding();
 	void run();
 
-	std::vector<DM::Face*> spiltFace( DM::System * sys, DM::Face * f, std::vector<double> splits);
+	std::vector<DM::Face*> spiltFace(DM::System * sys, DM::Face * f, std::vector<std::pair<string, double> > splits, bool street_side = true);
+
+	double whereIsStreet(std::vector<DM::Node> bb, std::vector<DM::Node *> streetNodes);
 
 
 
