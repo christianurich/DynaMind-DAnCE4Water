@@ -2,7 +2,7 @@ SET(gtest_force_shared_crt "ON" CACHE BOOL "")
 MESSAGE(STATUS "gtest_force_shared_crt = ${gtest_force_shared_crt}")
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}
 		    ${gtest_SOURCE_DIR}/include
-		    ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+		    ${CMAKE_CURRENT_SOURCE_DIR}/../src/DynaMind-DAnCE4Water)
 
 FILE(GLOB UNIT_CPP *.cpp)
 

@@ -6,8 +6,14 @@
 #include <dmlog.h>
 #include <dmlogsink.h>
 
+#include <tbvectordata.h>
+
 #include <cgalgeometry_p.h>
 #include <cgalgeometry.h>
+
+#include <melbournestylebuilding.h>
+
+
 
 DM::Face * addParcel(DM::System* sys, DM::View v)
 {
@@ -17,7 +23,7 @@ DM::Face * addParcel(DM::System* sys, DM::View v)
 	DM::Node * n4 = sys->addNode(DM::Node(0,50,0));
 
 	n1->addAttribute("street_side", 1);
-	n2->addAttribute("street_side", 1);
+	n4->addAttribute("street_side", 1);
 
 	std::vector<DM::Node * > nodes;
 	nodes.push_back(n1);
@@ -31,6 +37,7 @@ DM::Face * addParcel(DM::System* sys, DM::View v)
 }
 
 TEST_F(UnitTestsDAnCE4Water, TestOffset) {
+	typedef std::pair<std::string, double> split_type;
 	ostream *out = &cout;
 	DM::Log::init(new DM::OStreamLogSink(*out), DM::Debug);
 
@@ -40,38 +47,47 @@ TEST_F(UnitTestsDAnCE4Water, TestOffset) {
 
 	DM::Face * p = addParcel(sys, parcel);
 
-	typedef CGAL::Exact_predicates_inexact_constructions_kernel K ;
-	typedef K::Point_2                                          Point_2;
-	typedef CGAL::Polygon_2<K>                                  Polygon_2;
+	MelbourneStyleBuilding mb;
 
-	Polygon_2 poly1;
+	std::vector<split_type> splits;
+	splits.push_back(split_type("street",1));
+	splits.push_back(split_type("street1",2));
+	splits.push_back(split_type("street2",3));
 
-	foreach(DM::Node *n,  p->getNodePointers()){
-		poly1.push_back(Point_2(n->getX(), n->getY()));
-	}
-
-	DM::Logger(DM::Debug) << poly1.area();
-
-	//Intersection Polygon
-
-	std::vector<DM::Node * > offsetPoly;
-	foreach(DM::Node *n,  p->getNodePointers()){
-		if (n->getAttribute("street_side")->getDouble() > 0 ) {
-			offsetPoly.push_back(n);
+	std::vector<DM::Face*> ress = mb.spiltFace(sys, p, splits);
+	EXPECT_EQ(3,ress.size());
+	foreach (DM::Face * f, ress) {
+		//TBVectorData::PrintFace(f, DM::Debug);
+		std::string n_type =(f->getAttribute("type")->getString());
+		if (n_type == "street")
+			EXPECT_DOUBLE_EQ(25,DM::CGALGeometry::CalculateArea2D(f));
+		else if (n_type == "street1")
+			EXPECT_DOUBLE_EQ(50,DM::CGALGeometry::CalculateArea2D(f));
+		else if (n_type == "street2")
+			EXPECT_DOUBLE_EQ(75,DM::CGALGeometry::CalculateArea2D(f));
+		else {
+			DM::Logger(DM::Error) << "Something went wrong";
+			EXPECT_DOUBLE_EQ(75,0);
 		}
 	}
-	DM::Logger(DM::Debug) << offsetPoly.size();
 
-	//Create intersection Polygon
-
-
-
-	//DM::CGALGeometry::CalculateMinBoundingBox()
-
-
-
-
-
-
+	ress = mb.spiltFace(sys, p, splits, false); //90 degree
+	EXPECT_EQ(3,ress.size());
+	foreach (DM::Face * f, ress) {
+		//TBVectorData::PrintFace(f, DM::Debug);
+		std::string n_type =(f->getAttribute("type")->getString());
+		if (n_type == "street")
+			EXPECT_DOUBLE_EQ(50,DM::CGALGeometry::CalculateArea2D(f));
+		else if (n_type == "street1")
+			EXPECT_DOUBLE_EQ(100,DM::CGALGeometry::CalculateArea2D(f));
+		else if (n_type == "street2")
+			EXPECT_DOUBLE_EQ(150,DM::CGALGeometry::CalculateArea2D(f));
+		else {
+			DM::Logger(DM::Error) << "Something went wrong";
+			EXPECT_DOUBLE_EQ(75,0);
+		}
+	}
 }
+
+
 
