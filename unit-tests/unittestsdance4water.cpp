@@ -56,37 +56,13 @@ TEST_F(UnitTestsDAnCE4Water, TestOffset) {
 
 	std::vector<DM::Face*> ress = mb.spiltFace(sys, p, splits);
 	EXPECT_EQ(3,ress.size());
-	foreach (DM::Face * f, ress) {
-		//TBVectorData::PrintFace(f, DM::Debug);
-		std::string n_type =(f->getAttribute("type")->getString());
-		if (n_type == "street")
-			EXPECT_DOUBLE_EQ(25,DM::CGALGeometry::CalculateArea2D(f));
-		else if (n_type == "street1")
-			EXPECT_DOUBLE_EQ(50,DM::CGALGeometry::CalculateArea2D(f));
-		else if (n_type == "street2")
-			EXPECT_DOUBLE_EQ(75,DM::CGALGeometry::CalculateArea2D(f));
-		else {
-			DM::Logger(DM::Error) << "Something went wrong";
-			EXPECT_DOUBLE_EQ(75,0);
-		}
-	}
+
 
 	ress = mb.spiltFace(sys, p, splits, false); //90 degree
 	EXPECT_EQ(3,ress.size());
-	foreach (DM::Face * f, ress) {
-		//TBVectorData::PrintFace(f, DM::Debug);
-		std::string n_type =(f->getAttribute("type")->getString());
-		if (n_type == "street")
-			EXPECT_DOUBLE_EQ(50,DM::CGALGeometry::CalculateArea2D(f));
-		else if (n_type == "street1")
-			EXPECT_DOUBLE_EQ(100,DM::CGALGeometry::CalculateArea2D(f));
-		else if (n_type == "street2")
-			EXPECT_DOUBLE_EQ(150,DM::CGALGeometry::CalculateArea2D(f));
-		else {
-			DM::Logger(DM::Error) << "Something went wrong";
-			EXPECT_DOUBLE_EQ(75,0);
-		}
-	}
+
+
+	//mb.test();
 }
 
 

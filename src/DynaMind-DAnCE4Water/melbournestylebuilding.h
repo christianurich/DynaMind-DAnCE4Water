@@ -11,11 +11,14 @@ private:
 		DM::View parcels;
 		DM::View buildings;
 		DM::View splits;
+		DM::View stuff;
 
 		bool isStreetNode(DM::Node *n);
 public:
 		MelbourneStyleBuilding();
 		void run();
+
+		void test(DM::System *sys);
 
 		std::vector<DM::Face*> spiltFace(DM::System * sys, DM::Face * f, std::vector<std::pair<string, double> > splits, bool street_side = true);
 

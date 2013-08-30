@@ -1,13 +1,16 @@
 #include "melbournestylebuilding.h"
 
-
-
 #include <dmsystem.h>
 #include <dmface.h>
 #include <QTransform>
 #include <cgalgeometry.h>
 #include <tbvectordata.h>
 #include <spatialsearchnearestnodes.h>
+
+#include <geometry.hpp>
+#include <carve/csg.hpp>
+#include <carve/carve.hpp>
+#include <carve/mesh.hpp>
 
 DM_DECLARE_NODE_NAME(MelbourneStyleBuilding, DAnCE4Water)
 
@@ -18,13 +21,14 @@ MelbourneStyleBuilding::MelbourneStyleBuilding()
 	parcels = DM::View("PARCEL", DM::FACE, DM::READ);
 	buildings = DM::View("BUILDING", DM::EDGE, DM::WRITE);
 	splits = DM::View("SPITS", DM::EDGE, DM::WRITE);
-
+	stuff = DM::View("STUFF", DM::FACE, DM::WRITE);
 
 
 	std::vector<DM::View> datastream;
 	datastream.push_back(parcels);
 	datastream.push_back(buildings);
 	datastream.push_back(splits);
+	datastream.push_back(stuff);
 
 	this->addData("city", datastream);
 }
@@ -64,6 +68,86 @@ void MelbourneStyleBuilding::run()
 		}
 
 	}
+
+	test(city);
+}
+
+void MelbourneStyleBuilding::test(DM::System * sys)
+{
+	std::cout << "Hello World" << std::endl;
+
+	carve::mesh::MeshSet<3> * a = makeCube(carve::math::Matrix::SCALE(2.0, 2.0, 2.0));
+	carve::mesh::MeshSet<3> * b = makeCube(carve::math::Matrix::SCALE(2.0, 2.0, 2.0) *
+
+										   carve::math::Matrix::TRANS(1.0, 1.0, 1.0));
+
+	carve::csg::CSG::OP op = carve::csg::CSG::INTERSECTION;
+	carve::csg::CSG csg;
+
+
+
+
+	carve::mesh::MeshSet<3> *result  = csg.compute(a, b,  carve::csg::CSG::INTERSECTION);
+
+	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
+		carve::mesh::MeshSet<3>::face_t *f = *i;
+		std::vector<DM::Node*> nodes;
+		for (carve::mesh::MeshSet<3>::face_t::edge_iter_t e = f->begin(); e != f->end(); ++e) {
+			double x = (e->vert->v.x );
+			double y = (e->vert->v.y );
+			double z = (e->vert->v.z );
+			nodes.push_back(sys->addNode(x,y,z));
+			std::cout << "\t" << x << "\t" << y << "\t" << z<< std::endl;
+		}
+		DM::Face * f_dm = sys->addFace(nodes, stuff);
+		std::vector<double> colors;
+		colors.push_back(1);
+		colors.push_back(1);
+		colors.push_back(0);
+		f_dm->getAttribute("color")->setDoubleVector(colors);
+	}
+
+	result  = csg.compute(a, b, carve::csg::CSG::UNION);
+
+	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
+		carve::mesh::MeshSet<3>::face_t *f = *i;
+		std::vector<DM::Node*> nodes;
+		for (carve::mesh::MeshSet<3>::face_t::edge_iter_t e = f->begin(); e != f->end(); ++e) {
+			double x = (e->vert->v.x +5);
+			double y = (e->vert->v.y +5);
+			double z = (e->vert->v.z +5);
+			nodes.push_back(sys->addNode(x,y,z));
+			std::cout << "\t" << x << "\t" << y << "\t" << z<< std::endl;
+		}
+		DM::Face * f_dm = sys->addFace(nodes, stuff);
+		std::vector<double> colors;
+		colors.push_back(1);
+		colors.push_back(0);
+		colors.push_back(1);
+		f_dm->getAttribute("color")->setDoubleVector(colors);
+	}
+
+	result  = csg.compute(a, b, carve::csg::CSG::A_MINUS_B);
+
+	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
+		carve::mesh::MeshSet<3>::face_t *f = *i;
+		std::vector<DM::Node*> nodes;
+		for (carve::mesh::MeshSet<3>::face_t::edge_iter_t e = f->begin(); e != f->end(); ++e) {
+			double x = (e->vert->v.x +12);
+			double y = (e->vert->v.y +12);
+			double z = (e->vert->v.z +12);
+			nodes.push_back(sys->addNode(x,y,z));
+			std::cout << "\t" << x << "\t" << y << "\t" << z<< std::endl;
+		}
+		DM::Face * f_dm = sys->addFace(nodes, stuff);
+		std::vector<double> colors;
+		colors.push_back(1);
+		colors.push_back(0);
+		colors.push_back(0);
+		f_dm->getAttribute("color")->setDoubleVector(colors);
+	}
+	delete a;
+	delete b;
 }
 
 bool MelbourneStyleBuilding::isStreetNode(DM::Node * n) {
