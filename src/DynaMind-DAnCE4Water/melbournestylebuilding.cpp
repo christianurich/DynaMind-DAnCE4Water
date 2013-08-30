@@ -10,7 +10,8 @@
 #include <geometry.hpp>
 #include <carve/csg.hpp>
 #include <carve/carve.hpp>
-#include <carve/mesh.hpp>
+#include <carve/mesh_ops.hpp>
+#include <carve/triangulator.hpp>
 
 DM_DECLARE_NODE_NAME(MelbourneStyleBuilding, DAnCE4Water)
 
@@ -20,15 +21,17 @@ MelbourneStyleBuilding::MelbourneStyleBuilding()
 {
 	parcels = DM::View("PARCEL", DM::FACE, DM::READ);
 	buildings = DM::View("BUILDING", DM::EDGE, DM::WRITE);
-	splits = DM::View("SPITS", DM::EDGE, DM::WRITE);
+	splits = DM::View("SPLITS", DM::EDGE, DM::WRITE);
 	stuff = DM::View("STUFF", DM::FACE, DM::WRITE);
 
+	construction_side = DM::View("construction_side", DM::FACE, DM::WRITE);
 
 	std::vector<DM::View> datastream;
 	datastream.push_back(parcels);
 	datastream.push_back(buildings);
 	datastream.push_back(splits);
 	datastream.push_back(stuff);
+	datastream.push_back(construction_side);
 
 	this->addData("city", datastream);
 }
@@ -41,35 +44,60 @@ void MelbourneStyleBuilding::run()
 	mforeach (DM::Component * cmp, city->getAllComponentsInView(parcels)) {
 		DM::Face * parcel = dynamic_cast<DM::Face*>(cmp);
 
-		typedef std::pair<std::string, double> splitpair;
+		typedef std::pair<std::string, split_val> splitpair;
+
 		std::vector<splitpair> splits;
-		splits.push_back(splitpair("front",2));
-		splits.push_back(splitpair("front",3));
+		splits.push_back(splitpair("front",split_val("5", true)));
+		splits.push_back(splitpair("front",split_val("5", true)));
+		splits.push_back(splitpair("construction_side",split_val("x", false)));
+		splits.push_back(splitpair("back",split_val("3", true)));
+
 		std::vector<DM::Face*> results = this->spiltFace(city, parcel, splits);
 
-
-		foreach (DM::Face * f_r, results) {
-			for (uint i = 1; i < f_r->getNodePointers().size(); i++) {
-				city->addEdge(f_r->getNodePointers()[i-1], f_r->getNodePointers()[i], this->splits);
-			}
-			city->addEdge(f_r->getNodePointers()[f_r->getNodePointers().size()-1], f_r->getNodePointers()[0], this->splits);
-		}
-
 		std::vector<splitpair> splits_1;
-		splits_1.push_back(splitpair("front",5));
-		results = this->spiltFace(city, parcel, splits_1,false);
+		splits_1.push_back(splitpair("side",split_val("3", true)));
+		splits_1.push_back(splitpair("drive_way",split_val("5", true)));
+		splits_1.push_back(splitpair("construction_side",split_val("x", false)));
+		splits_1.push_back(splitpair("side",split_val("3", false)));
 
 
-		foreach (DM::Face * f_r, results) {
+		foreach (DM::Face * f_r, this->spiltFace(city, parcel, splits_1,false)) {
+			results.push_back(f_r);
+		}
+		foreach (DM::Face * f_r, results){
 			for (uint i = 1; i < f_r->getNodePointers().size(); i++) {
 				city->addEdge(f_r->getNodePointers()[i-1], f_r->getNodePointers()[i], this->splits);
 			}
 			city->addEdge(f_r->getNodePointers()[f_r->getNodePointers().size()-1], f_r->getNodePointers()[0], this->splits);
 		}
 
+		//Now find all construction sites and intersect them
+		std::vector<DM::Face*> construction_sides;
+
+		foreach (DM::Face * f, results) {
+			if (f->getAttribute("type")->getString() == "construction_side")
+				construction_sides.push_back(f);
+		}
+
+		//intersect faces
+		std::vector<DM::Face*> intersectedFaces;
+		intersectedFaces.push_back(construction_sides[0]);
+		for (int i = 1; i < construction_sides.size(); i++) {
+			std::vector<DM::Face*> intersectedFaces_tmp;
+			foreach (DM::Face * i_f, intersectedFaces) {
+				foreach (DM::Face * r_f, DM::CGALGeometry::BoolOperationFace(city, i_f, construction_sides[i], DM::CGALGeometry::OP_INTERSECT)) {
+					intersectedFaces_tmp.push_back(r_f);
+				}
+			}
+			intersectedFaces = intersectedFaces_tmp;
+		}
+		foreach (DM::Face * f, intersectedFaces) {
+			city->addComponentToView(f, construction_side);
+		}
 	}
 
-	test(city);
+
+
 }
 
 void MelbourneStyleBuilding::test(DM::System * sys)
@@ -83,9 +111,6 @@ void MelbourneStyleBuilding::test(DM::System * sys)
 
 	carve::csg::CSG::OP op = carve::csg::CSG::INTERSECTION;
 	carve::csg::CSG csg;
-
-
-
 
 	carve::mesh::MeshSet<3> *result  = csg.compute(a, b,  carve::csg::CSG::INTERSECTION);
 
@@ -131,21 +156,33 @@ void MelbourneStyleBuilding::test(DM::System * sys)
 
 	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
 		carve::mesh::MeshSet<3>::face_t *f = *i;
-		std::vector<DM::Node*> nodes;
-		for (carve::mesh::MeshSet<3>::face_t::edge_iter_t e = f->begin(); e != f->end(); ++e) {
-			double x = (e->vert->v.x +12);
-			double y = (e->vert->v.y +12);
-			double z = (e->vert->v.z +12);
-			nodes.push_back(sys->addNode(x,y,z));
-			std::cout << "\t" << x << "\t" << y << "\t" << z<< std::endl;
+
+		std::vector<carve::mesh::Edge<3> *> triangles;
+		carve::mesh::triangulate(f->edge, f->project, std::back_inserter(triangles));
+
+		foreach (carve::mesh::Edge<3> * t, triangles) {
+			std::vector<DM::Node*> nodes;
+			carve::mesh::Edge<3> *e = t;
+			do {
+
+				double x = (e->vert->v.x +12);
+				double y = (e->vert->v.y +12);
+				double z = (e->vert->v.z +12);
+				nodes.push_back(sys->addNode(x,y,z));
+				e = e->next;
+			} while (e != t);
+
+			DM::Face * f_dm = sys->addFace(nodes, stuff);
+			std::vector<double> colors;
+
+			colors.push_back(1);
+			colors.push_back(0);
+			colors.push_back(0);
+			f_dm->getAttribute("color")->setDoubleVector(colors);
 		}
-		DM::Face * f_dm = sys->addFace(nodes, stuff);
-		std::vector<double> colors;
-		colors.push_back(1);
-		colors.push_back(0);
-		colors.push_back(0);
-		f_dm->getAttribute("color")->setDoubleVector(colors);
+
 	}
+
 	delete a;
 	delete b;
 }
@@ -156,7 +193,37 @@ bool MelbourneStyleBuilding::isStreetNode(DM::Node * n) {
 	return false;
 }
 
-std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::Face *f, std::vector<std::pair<std::string, double> > splits, bool street_side)
+std::vector<std::pair<std::string, double> > MelbourneStyleBuilding::translateSwitch(double l, std::vector<std::pair<std::string, split_val> > splits)
+{
+	std::vector<std::pair<std::string, double> > tranlasted_splits;
+	int x_counter = 0;
+	double length_used = 0;
+	typedef std::pair<std::string, split_val>  type_val;
+	foreach (type_val vals, splits) {
+		split_val s_val = vals.second;
+		double val = -1;
+		if (s_val.second) {
+			val = QString::fromStdString(s_val.first).toDouble();
+			length_used+=val;
+		} else {
+			x_counter++;
+		}
+		tranlasted_splits.push_back(std::pair<std::string, double>(vals.first, val));
+	}
+	double dx = (l - length_used)/(double)x_counter;
+
+	for (int i = 0; i < tranlasted_splits.size(); i++) {
+		std::pair<std::string, double> val = tranlasted_splits[i];
+		if (val.second < 0) {
+			val.second = dx;
+		}
+		tranlasted_splits[i] = val;
+	}
+
+	return tranlasted_splits;
+}
+
+std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::Face *f, std::vector<std::pair<std::string, split_val> > split_rules, bool street_side)
 {
 	std::vector<DM::Face * > results;
 	std::vector<DM::Node> box;
@@ -195,6 +262,11 @@ std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::F
 	double w = size[1];
 
 	double current_x = 0;
+
+	double r_l = l;
+	if (!street_side)
+		r_l = w;
+	std::vector<std::pair<std::string, double> > splits = this->translateSwitch(r_l, split_rules);
 
 	for (unsigned i = 0; i < splits.size(); i++) {
 		std::string type = splits[i].first;
