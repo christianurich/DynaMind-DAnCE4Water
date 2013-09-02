@@ -51,13 +51,15 @@ public:
 
 		void test(DM::System *sys);
 
-		std::vector<DM::Face*> spiltFace(DM::System * sys, DM::Face * f, std::vector<std::pair<string, split_val> > splits, bool street_side = true);
+		std::vector<DM::Face*> spiltFace(DM::System * sys, DM::Face * f, std::vector<std::pair<string, split_val> > splits, std::vector<DM::Edge *> street_edges, bool street_side = true);
 
 		double whereIsStreet(std::vector<DM::Node> bb, std::vector<DM::Edge *> streetEdges);
 
 
 
 		std::vector<std::pair<std::string, double> > translateSwitch(double l, std::vector<std::pair<std::string, split_val> > splits);
+		void createBuilding(DM::System *sys, DM::Face *f, DM::View v);
+		std::vector<DM::Face *> intersectFaces(DM::System * sys, std::vector<DM::Face *> faces, std::string type);
 };
 
 #endif // MELBOURNESTYLEBUILDING_H

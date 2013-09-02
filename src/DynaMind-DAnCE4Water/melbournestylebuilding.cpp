@@ -33,6 +33,7 @@
 #include <tbvectordata.h>
 #include <spatialsearchnearestnodes.h>
 #include <dmgeomtry3d.h>
+#include <cgalskeletonisation.h>
 
 
 DM_DECLARE_NODE_NAME(MelbourneStyleBuilding, DAnCE4Water)
@@ -42,7 +43,7 @@ DM_DECLARE_NODE_NAME(MelbourneStyleBuilding, DAnCE4Water)
 MelbourneStyleBuilding::MelbourneStyleBuilding()
 {
 	parcels = DM::View("PARCEL", DM::FACE, DM::READ);
-	buildings = DM::View("BUILDING", DM::EDGE, DM::WRITE);
+	buildings = DM::View("BUILDING", DM::FACE, DM::WRITE);
 	splits = DM::View("SPLITS", DM::EDGE, DM::WRITE);
 	stuff = DM::View("STUFF", DM::FACE, DM::WRITE);
 
@@ -59,6 +60,30 @@ MelbourneStyleBuilding::MelbourneStyleBuilding()
 }
 
 
+std::vector<DM::Face *> MelbourneStyleBuilding::intersectFaces(DM::System * sys, std::vector<DM::Face*> faces, std::string type)
+{
+
+	std::vector<DM::Face*> construction_sides;
+	foreach (DM::Face * f, faces) {
+		if (f->getAttribute("type")->getString() == type)
+			construction_sides.push_back(f);
+	}
+
+	std::vector<DM::Face*> intersectedFaces;
+	intersectedFaces.push_back(construction_sides[0]);
+	for (int i = 1; i < construction_sides.size(); i++) {
+		std::vector<DM::Face*> intersectedFaces_tmp;
+		foreach (DM::Face * i_f, intersectedFaces) {
+			foreach (DM::Face * r_f, DM::CGALGeometry::BoolOperationFace(sys, i_f, construction_sides[i], DM::CGALGeometry::OP_INTERSECT)) {
+				intersectedFaces_tmp.push_back(r_f);
+			}
+		}
+		intersectedFaces = intersectedFaces_tmp;
+	}
+
+	return intersectedFaces;
+}
+
 void MelbourneStyleBuilding::run()
 {
 	DM::System * city = this->getData("city");
@@ -68,13 +93,24 @@ void MelbourneStyleBuilding::run()
 
 		typedef std::pair<std::string, split_val> splitpair;
 
+
+		std::vector<DM::Edge*> streetEdges;
+
+		std::vector<DM::Node *> nodesToCheck = parcel->getNodePointers();
+		nodesToCheck.push_back(nodesToCheck[0]);
+		for (int i = 1; i < nodesToCheck.size(); i++){
+			if (isStreetNode(nodesToCheck[i-1]) && isStreetNode(nodesToCheck[i])){
+				streetEdges.push_back(city->addEdge(nodesToCheck[i-1], nodesToCheck[i]));
+			}
+		}
+
 		std::vector<splitpair> splits;
 		splits.push_back(splitpair("front",split_val("5", true)));
 		splits.push_back(splitpair("front",split_val("5", true)));
 		splits.push_back(splitpair("construction_side",split_val("x", false)));
 		splits.push_back(splitpair("back",split_val("3", true)));
 
-		std::vector<DM::Face*> results = this->spiltFace(city, parcel, splits);
+		std::vector<DM::Face*> results = this->spiltFace(city, parcel, splits,streetEdges);
 
 		std::vector<splitpair> splits_1;
 		splits_1.push_back(splitpair("side",split_val("3", true)));
@@ -83,7 +119,7 @@ void MelbourneStyleBuilding::run()
 		splits_1.push_back(splitpair("side",split_val("3", false)));
 
 
-		foreach (DM::Face * f_r, this->spiltFace(city, parcel, splits_1,false)) {
+		foreach (DM::Face * f_r, this->spiltFace(city, parcel, splits_1,streetEdges,false)) {
 			results.push_back(f_r);
 		}
 		foreach (DM::Face * f_r, results){
@@ -93,39 +129,31 @@ void MelbourneStyleBuilding::run()
 			city->addEdge(f_r->getNodePointers()[f_r->getNodePointers().size()-1], f_r->getNodePointers()[0], this->splits);
 		}
 
-		//Now find all construction sites and intersect them
-		std::vector<DM::Face*> construction_sides;
 
-		foreach (DM::Face * f, results) {
-			if (f->getAttribute("type")->getString() == "construction_side")
-				construction_sides.push_back(f);
-		}
-
+		//Split Construction Side
+		std::vector<splitpair> splits_construction_side;
+		splits_construction_side.push_back(splitpair("real_con",split_val("12", true)));
+		splits_construction_side.push_back(splitpair("backyard",split_val("x", false)));
 		//intersect faces
-		std::vector<DM::Face*> intersectedFaces;
-		intersectedFaces.push_back(construction_sides[0]);
-		for (int i = 1; i < construction_sides.size(); i++) {
-			std::vector<DM::Face*> intersectedFaces_tmp;
-			foreach (DM::Face * i_f, intersectedFaces) {
-				foreach (DM::Face * r_f, DM::CGALGeometry::BoolOperationFace(city, i_f, construction_sides[i], DM::CGALGeometry::OP_INTERSECT)) {
-					intersectedFaces_tmp.push_back(r_f);
-				}
+		std::vector<DM::Face*> side = this->spiltFace(city, this->intersectFaces(city, results, "construction_side")[0], splits_construction_side, streetEdges);
+
+		foreach (DM::Face * f, side) {
+			if (f->getAttribute("type")->getString() == "real_con") {
+				city->addComponentToView(f, construction_side);
+				this->createBuilding(city, f,buildings);
 			}
-			intersectedFaces = intersectedFaces_tmp;
 		}
-		foreach (DM::Face * f, intersectedFaces) {
-			city->addComponentToView(f, construction_side);
-		}
+
 	}
-
 }
-
 
 bool MelbourneStyleBuilding::isStreetNode(DM::Node * n) {
 	if(n->getAttribute("street_side")->getDouble() > 0)
 		return true;
 	return false;
 }
+
+
 
 std::vector<std::pair<std::string, double> > MelbourneStyleBuilding::translateSwitch(double l, std::vector<std::pair<std::string, split_val> > splits)
 {
@@ -157,21 +185,39 @@ std::vector<std::pair<std::string, double> > MelbourneStyleBuilding::translateSw
 	return tranlasted_splits;
 }
 
-std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::Face *f, std::vector<std::pair<std::string, split_val> > split_rules, bool street_side)
+void MelbourneStyleBuilding::createBuilding(DM::System * sys, DM::Face * f, DM::View v) {
+	std::vector<DM::Node*> basement = f->getNodePointers();
+	if (!DM::CGALGeometry::CheckOrientation(basement)) {
+		std::reverse(basement.begin(), basement.end());
+	}
+	std::vector<DM::Face*> results = TBVectorData::ExtrudeFace(sys,DM::View("", DM::FACE, DM::WRITE), basement, 3);
+	std::reverse(basement.begin(), basement.end());
+	results.push_back(sys->addFace(basement));
+
+	std::vector<DM::Node*> roof_nodes;
+	foreach(DM::Node * n, basement) {
+		roof_nodes.push_back(sys->addNode(DM::Node(n->getX(),n->getY(),n->getZ()+3)));
+	}
+	DM::System s= DM::CGALSkeletonisation::StraightSkeletonisation(sys, sys->addFace(roof_nodes),30);
+	mforeach (DM::Component * cmp, s.getAllComponentsInView(DM::View("Roof", DM::FACE, DM::WRITE))) {
+		DM::Face * r = dynamic_cast<DM::Face*>(cmp);
+		TBVectorData::CopyFaceGeometryToNewSystem(r,sys);
+		results.push_back(r);
+	}
+
+	foreach(DM::Face *r,  DM::DMGeomtry3D::SurfaceTriangulation(sys,results )) {
+		sys->addComponentToView(r, v);
+		TBVectorData::PrintFace(r, DM::Standard);
+	}
+}
+
+std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::Face *f, std::vector<std::pair<std::string, split_val> > split_rules, std::vector<DM::Edge*> streetEdges,bool street_side)
 {
 	std::vector<DM::Face * > results;
 	std::vector<DM::Node> box;
 	std::vector<double> size;
 
-	std::vector<DM::Edge*> streetEdges;
 
-	std::vector<DM::Node *> nodesToCheck = f->getNodePointers();
-	nodesToCheck.push_back(nodesToCheck[0]);
-	for (int i = 1; i < nodesToCheck.size(); i++){
-		if (isStreetNode(nodesToCheck[i-1]) && isStreetNode(nodesToCheck[i])){
-			streetEdges.push_back(sys->addEdge(nodesToCheck[i-1], nodesToCheck[i]));
-		}
-	}
 
 
 	double alpha = DM::CGALGeometry::CalculateMinBoundingBox(TBVectorData::getNodeListFromFace(sys, f), box, size);
@@ -245,6 +291,7 @@ std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::F
 			results.push_back(f);
 			f->addAttribute("type", type);
 		}
+
 	}
 
 	return results;
