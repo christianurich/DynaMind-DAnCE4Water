@@ -54,9 +54,9 @@ std::vector<DM::Face*> DMGeomtry3D::SurfaceTriangulation(DM::System * sys,std::v
 			carve::mesh::Edge<3> *e = t;
 			do {
 
-				double x = (e->vert->v.x +12);
-				double y = (e->vert->v.y +12);
-				double z = (e->vert->v.z +12);
+				double x = (e->vert->v.x);
+				double y = (e->vert->v.y);
+				double z = (e->vert->v.z);
 				nodes.push_back(sys->addNode(x,y,z));
 				e = e->next;
 			} while (e != t);
@@ -65,8 +65,8 @@ std::vector<DM::Face*> DMGeomtry3D::SurfaceTriangulation(DM::System * sys,std::v
 			std::vector<double> colors;
 
 
-			colors.push_back(1);
 			colors.push_back(0);
+			colors.push_back(0.5);
 			colors.push_back(0);
 			f_dm->getAttribute("color")->setDoubleVector(colors);
 			mesh.push_back(f_dm);
