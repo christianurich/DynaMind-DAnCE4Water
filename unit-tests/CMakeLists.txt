@@ -4,6 +4,10 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}
 		    ${gtest_SOURCE_DIR}/include
 		    ${CMAKE_CURRENT_SOURCE_DIR}/../src/DynaMind-DAnCE4Water)
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../3rdparty/carve/include)
+include_directories(../3rdparty/carve/include)
+include_directories(../3rdparty/carve/common)
+
 FILE(GLOB UNIT_CPP *.cpp)
 
 ADD_EXECUTABLE(unit-tests-dance4water ${UNIT_CPP})
@@ -12,4 +16,4 @@ IF(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
 	SET_TARGET_PROPERTIES(unit-tests-dance4water  PROPERTIES COMPILE_FLAGS "-frounding-math -fPIC")
 ENDIF()
 
-TARGET_LINK_LIBRARIES(unit-tests-dance4water gtest_main dance4water ${DYNAMIND_TOOLBOX_LIBRARY} ${DYNAMIND_CORE_LIBRARY} ${DYNAMIND_EXTENSIONS_LIBRARY} ${QT_LIBRARIES} ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES} ${GDAL_LIBRARY})
+TARGET_LINK_LIBRARIES(unit-tests-dance4water gtest_main carve  carve_misc  dance4water ${DYNAMIND_TOOLBOX_LIBRARY} ${DYNAMIND_CORE_LIBRARY} ${DYNAMIND_EXTENSIONS_LIBRARY} ${QT_LIBRARIES} ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES} ${GDAL_LIBRARY})

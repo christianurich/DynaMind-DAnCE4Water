@@ -1,3 +1,29 @@
+/**
+ * @file
+ * @author  Chrisitan Urich <christian.urich@gmail.com>
+ * @version 1.0
+ * @section LICENSE
+ *
+ * This file is part of DynaMind
+ *
+ * Copyright (C) 2013  Christian Urich
+
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
 #include "melbournestylebuilding.h"
 
 #include <dmsystem.h>
@@ -6,12 +32,8 @@
 #include <cgalgeometry.h>
 #include <tbvectordata.h>
 #include <spatialsearchnearestnodes.h>
+#include <dmgeomtry3d.h>
 
-#include <geometry.hpp>
-#include <carve/csg.hpp>
-#include <carve/carve.hpp>
-#include <carve/mesh_ops.hpp>
-#include <carve/triangulator.hpp>
 
 DM_DECLARE_NODE_NAME(MelbourneStyleBuilding, DAnCE4Water)
 
@@ -96,96 +118,8 @@ void MelbourneStyleBuilding::run()
 		}
 	}
 
-
-
 }
 
-void MelbourneStyleBuilding::test(DM::System * sys)
-{
-	std::cout << "Hello World" << std::endl;
-
-	carve::mesh::MeshSet<3> * a = makeCube(carve::math::Matrix::SCALE(2.0, 2.0, 2.0));
-	carve::mesh::MeshSet<3> * b = makeCube(carve::math::Matrix::SCALE(2.0, 2.0, 2.0) *
-
-										   carve::math::Matrix::TRANS(1.0, 1.0, 1.0));
-
-	carve::csg::CSG::OP op = carve::csg::CSG::INTERSECTION;
-	carve::csg::CSG csg;
-
-	carve::mesh::MeshSet<3> *result  = csg.compute(a, b,  carve::csg::CSG::INTERSECTION);
-
-	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
-		carve::mesh::MeshSet<3>::face_t *f = *i;
-		std::vector<DM::Node*> nodes;
-		for (carve::mesh::MeshSet<3>::face_t::edge_iter_t e = f->begin(); e != f->end(); ++e) {
-			double x = (e->vert->v.x );
-			double y = (e->vert->v.y );
-			double z = (e->vert->v.z );
-			nodes.push_back(sys->addNode(x,y,z));
-			std::cout << "\t" << x << "\t" << y << "\t" << z<< std::endl;
-		}
-		DM::Face * f_dm = sys->addFace(nodes, stuff);
-		std::vector<double> colors;
-		colors.push_back(1);
-		colors.push_back(1);
-		colors.push_back(0);
-		f_dm->getAttribute("color")->setDoubleVector(colors);
-	}
-
-	result  = csg.compute(a, b, carve::csg::CSG::UNION);
-
-	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
-		carve::mesh::MeshSet<3>::face_t *f = *i;
-		std::vector<DM::Node*> nodes;
-		for (carve::mesh::MeshSet<3>::face_t::edge_iter_t e = f->begin(); e != f->end(); ++e) {
-			double x = (e->vert->v.x +5);
-			double y = (e->vert->v.y +5);
-			double z = (e->vert->v.z +5);
-			nodes.push_back(sys->addNode(x,y,z));
-			std::cout << "\t" << x << "\t" << y << "\t" << z<< std::endl;
-		}
-		DM::Face * f_dm = sys->addFace(nodes, stuff);
-		std::vector<double> colors;
-		colors.push_back(1);
-		colors.push_back(0);
-		colors.push_back(1);
-		f_dm->getAttribute("color")->setDoubleVector(colors);
-	}
-
-	result  = csg.compute(a, b, carve::csg::CSG::A_MINUS_B);
-
-	for (carve::mesh::MeshSet<3>::face_iter i = result->faceBegin(); i != result->faceEnd(); ++i) {
-		carve::mesh::MeshSet<3>::face_t *f = *i;
-
-		std::vector<carve::mesh::Edge<3> *> triangles;
-		carve::mesh::triangulate(f->edge, f->project, std::back_inserter(triangles));
-
-		foreach (carve::mesh::Edge<3> * t, triangles) {
-			std::vector<DM::Node*> nodes;
-			carve::mesh::Edge<3> *e = t;
-			do {
-
-				double x = (e->vert->v.x +12);
-				double y = (e->vert->v.y +12);
-				double z = (e->vert->v.z +12);
-				nodes.push_back(sys->addNode(x,y,z));
-				e = e->next;
-			} while (e != t);
-
-			DM::Face * f_dm = sys->addFace(nodes, stuff);
-			std::vector<double> colors;
-
-			colors.push_back(1);
-			colors.push_back(0);
-			colors.push_back(0);
-			f_dm->getAttribute("color")->setDoubleVector(colors);
-		}
-
-	}
-
-	delete a;
-	delete b;
-}
 
 bool MelbourneStyleBuilding::isStreetNode(DM::Node * n) {
 	if(n->getAttribute("street_side")->getDouble() > 0)

@@ -24,40 +24,31 @@
  *
  */
 
+#ifndef DMGEOMTRY3D_H
+#define DMGEOMTRY3D_H
 
-#ifndef MELBOURNESTYLEBUILDING_H
-#define MELBOURNESTYLEBUILDING_H
+#include <cgalgeometry.h>
+#include <vector>
 
-#include <cgalgeometry_p.h>
-#include <dmmodule.h>
-
-typedef std::pair<std::string, bool> split_val;
-
-class DM_HELPER_DLL_EXPORT MelbourneStyleBuilding : public DM::Module
-{
-	DM_DECLARE_NODE(MelbourneStyleBuilding)
-private:
-		DM::View parcels;
-		DM::View buildings;
-		DM::View splits;
-		DM::View stuff;
-
-		DM::View construction_side;
-
-		bool isStreetNode(DM::Node *n);
-public:
-		MelbourneStyleBuilding();
-		void run();
-
-		void test(DM::System *sys);
-
-		std::vector<DM::Face*> spiltFace(DM::System * sys, DM::Face * f, std::vector<std::pair<string, split_val> > splits, bool street_side = true);
-
-		double whereIsStreet(std::vector<DM::Node> bb, std::vector<DM::Edge *> streetEdges);
+namespace DM {
+	class System;
+	class Face;
+	class View;
+	class Subsystem;
+}
 
 
 
-		std::vector<std::pair<std::string, double> > translateSwitch(double l, std::vector<std::pair<std::string, split_val> > splits);
-};
+namespace DM {
+	class DMGeomtry3D
+	{
+	public:
 
-#endif // MELBOURNESTYLEBUILDING_H
+		static std::vector<DM::Face *> BoolOperation(DM::System * sys, std::vector<DM::Face *> facesA, std::vector<DM::Face *> facesB, CGALGeometry::BoolOperation op_dm);
+
+		static std::vector<DM::Face *> SurfaceTriangulation(DM::System * sys, std::vector<DM::Face *> faces);
+	};
+}
+
+
+#endif // DMGEOMTRY3D_H
