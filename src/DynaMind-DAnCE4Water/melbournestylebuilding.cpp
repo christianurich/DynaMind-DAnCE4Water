@@ -34,6 +34,9 @@
 #include <spatialsearchnearestnodes.h>
 #include <dmgeomtry3d.h>
 #include <cgalskeletonisation.h>
+#include <dmsimulationwriter.h>
+
+#include <math.h>
 
 
 DM_DECLARE_NODE_NAME(MelbourneStyleBuilding, DAnCE4Water)
@@ -84,34 +87,65 @@ std::vector<DM::Face *> MelbourneStyleBuilding::intersectFaces(DM::System * sys,
 	return intersectedFaces;
 }
 
+std::vector<DM::Edge *> MelbourneStyleBuilding::findStreets( DM::System* city, DM::Face* parcel)
+{
+	std::vector<DM::Edge*> streetEdges;
+
+	std::vector<DM::Node *> nodesToCheck = parcel->getNodePointers();
+	nodesToCheck.push_back(nodesToCheck[0]);
+	for (int i = 1; i < nodesToCheck.size(); i++){
+		if (isStreetNode(nodesToCheck[i-1]) && isStreetNode(nodesToCheck[i])){
+			DM::Edge * e = city->addEdge(nodesToCheck[i-1], nodesToCheck[i]);
+			if (e) {
+				streetEdges.push_back(e);
+			} else {
+				DM::Logger(DM::Error) << "Stuff went wrong " << ADDRESS_TO_INT(nodesToCheck[i-1])<< "/" << ADDRESS_TO_INT(nodesToCheck[i]);
+			}
+		}
+	}
+
+	return streetEdges;
+}
+
 void MelbourneStyleBuilding::run()
 {
 	DM::System * city = this->getData("city");
 
 	mforeach (DM::Component * cmp, city->getAllComponentsInView(parcels)) {
 		DM::Face * parcel = dynamic_cast<DM::Face*>(cmp);
+		if (parcel->getNodePointers().size() < 4) {
+			DM::Logger(DM::Warning) << "not enough nodes";
+			continue;
+		}
+		std::vector<DM::Node> box;
+		std::vector<double> size;
 
-		typedef std::pair<std::string, split_val> splitpair;
-
-
-		std::vector<DM::Edge*> streetEdges;
-
-		std::vector<DM::Node *> nodesToCheck = parcel->getNodePointers();
-		nodesToCheck.push_back(nodesToCheck[0]);
-		for (int i = 1; i < nodesToCheck.size(); i++){
-			if (isStreetNode(nodesToCheck[i-1]) && isStreetNode(nodesToCheck[i])){
-				streetEdges.push_back(city->addEdge(nodesToCheck[i-1], nodesToCheck[i]));
+		DM::CGALGeometry::CalculateMinBoundingBox(TBVectorData::getNodeListFromFace(city, parcel), box, size);
+		bool fine = true;
+		foreach (double v, size) {
+			if (v < 13) {
+				//DM::Logger(DM::Warning) << " to small";
+				fine = false;
 			}
 		}
+		if (!fine)
+			continue;
+
+		std::vector<DM::Edge*> streetEdges = findStreets(city, parcel);
+		if (streetEdges.size() == 0) {
+			DM::Logger(DM::Debug) << "No access to parcel (no street found)";
+			continue;
+
+		}
+
+		typedef std::pair<std::string, split_val> splitpair;
 
 		std::vector<splitpair> splits;
 		splits.push_back(splitpair("front",split_val("5", true)));
 		splits.push_back(splitpair("front",split_val("5", true)));
 		splits.push_back(splitpair("construction_side",split_val("x", false)));
 		splits.push_back(splitpair("back",split_val("3", true)));
-
 		std::vector<DM::Face*> results = this->spiltFace(city, parcel, splits,streetEdges);
-
 		std::vector<splitpair> splits_1;
 		splits_1.push_back(splitpair("side",split_val("3", true)));
 		splits_1.push_back(splitpair("drive_way",split_val("5", true)));
@@ -129,7 +163,6 @@ void MelbourneStyleBuilding::run()
 			city->addEdge(f_r->getNodePointers()[f_r->getNodePointers().size()-1], f_r->getNodePointers()[0], this->splits);
 		}
 
-
 		//Split Construction Side
 		std::vector<splitpair> splits_construction_side;
 		splits_construction_side.push_back(splitpair("real_con",split_val("12", true)));
@@ -140,6 +173,8 @@ void MelbourneStyleBuilding::run()
 		foreach (DM::Face * f, side) {
 			if (f->getAttribute("type")->getString() == "real_con") {
 				city->addComponentToView(f, construction_side);
+				if (f->getNodePointers().size() < 4)
+					continue;
 				this->createBuilding(city, f,buildings);
 			}
 		}
@@ -187,28 +222,32 @@ std::vector<std::pair<std::string, double> > MelbourneStyleBuilding::translateSw
 
 void MelbourneStyleBuilding::createBuilding(DM::System * sys, DM::Face * f, DM::View v) {
 	std::vector<DM::Node*> basement = f->getNodePointers();
+	std::cout << f->getNodePointers().size() << std::endl;
 	if (!DM::CGALGeometry::CheckOrientation(basement)) {
 		std::reverse(basement.begin(), basement.end());
 	}
 	std::vector<DM::Face*> results = TBVectorData::ExtrudeFace(sys,DM::View("", DM::FACE, DM::WRITE), basement, 3);
 	std::reverse(basement.begin(), basement.end());
 	results.push_back(sys->addFace(basement));
+	std::cout << "done1" << std::endl;
 
-	std::vector<DM::Node*> roof_nodes;
+	/*std::vector<DM::Node*> roof_nodes;
 	foreach(DM::Node * n, basement) {
 		roof_nodes.push_back(sys->addNode(DM::Node(n->getX(),n->getY(),n->getZ()+3)));
 	}
-	DM::System s= DM::CGALSkeletonisation::StraightSkeletonisation(sys, sys->addFace(roof_nodes),30);
+	DM::System s = DM::CGALSkeletonisation::StraightSkeletonisation(sys, sys->addFace(roof_nodes),30);
 	mforeach (DM::Component * cmp, s.getAllComponentsInView(DM::View("Roof", DM::FACE, DM::WRITE))) {
 		DM::Face * r = dynamic_cast<DM::Face*>(cmp);
-		TBVectorData::CopyFaceGeometryToNewSystem(r,sys);
-		results.push_back(r);
-	}
-
+		DM::Face * r_new = TBVectorData::CopyFaceGeometryToNewSystem(r,sys);
+		if (r_new)
+			results.push_back(r_new);
+	}*/
+	//DM::DMGeomtry3D::SurfaceTriangulation(sys,results );
 	foreach(DM::Face *r,  DM::DMGeomtry3D::SurfaceTriangulation(sys,results )) {
 		sys->addComponentToView(r, v);
-		TBVectorData::PrintFace(r, DM::Standard);
+		//		TBVectorData::PrintFace(r, DM::Debug);
 	}
+	std::cout << "done2" << std::endl;
 }
 
 std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::Face *f, std::vector<std::pair<std::string, split_val> > split_rules, std::vector<DM::Edge*> streetEdges,bool street_side)
@@ -217,11 +256,10 @@ std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::F
 	std::vector<DM::Node> box;
 	std::vector<double> size;
 
-
-
-
 	double alpha = DM::CGALGeometry::CalculateMinBoundingBox(TBVectorData::getNodeListFromFace(sys, f), box, size);
-	alpha = this->whereIsStreet(box, streetEdges);
+	double  alpha_tmp = this->whereIsStreet(box, streetEdges) + 90.;
+	if (!std::isnan(alpha_tmp))
+		alpha = alpha_tmp;
 
 
 	DM::Face * bb;
@@ -300,18 +338,16 @@ std::vector<DM::Face *> MelbourneStyleBuilding::spiltFace(DM::System *sys, DM::F
 double MelbourneStyleBuilding::whereIsStreet(std::vector<DM::Node> bb, std::vector<DM::Edge*> streetEdges)
 {
 	if (streetEdges.size() == 0) {
-		DM::Logger(DM::Error) << "No Streets found";
-		return 0;
+		DM::Logger(DM::Debug) << "No Streets found";
+		return std::numeric_limits<double>::quiet_NaN();
 	}
 
-	std::vector<std::pair<int,int> > indizes;
-	foreach (DM::Edge * e, streetEdges) {
-		std::pair<int, int> bb_nodes;
+	std::set<int> bbNodesClosest;
+	foreach (DM::Edge * e, streetEdges) { //Mark bb edges close to street
 		std::vector<DM::Node*> nodes;
-		nodes.push_back(e->getStartNode());
+		nodes.push_back(e->getStartNode());//Go over every node
 		nodes.push_back(e->getEndNode());
-
-		for (int k = 0; k < 2; k++) {
+		for (int k = 0; k < nodes.size(); k++) { //Search closest BB Node
 			int index = 0;
 			double current_l = TBVectorData::calculateDistance(nodes[k], &bb[0]);
 			for (uint i = 1; i < bb.size(); i++) {
@@ -321,34 +357,45 @@ double MelbourneStyleBuilding::whereIsStreet(std::vector<DM::Node> bb, std::vect
 					current_l = l;
 				}
 			}
-			if (k == 0)
-				bb_nodes.first = index;
-			if (k == 1)
-				bb_nodes.second = index;
-		}
-		indizes.push_back(bb_nodes);
-	}
-	std::pair<int,int> access_street;
-	access_street = indizes[0];
-	double l_current = TBVectorData::calculateDistance( &bb[indizes[0].first], &bb[indizes[0].second]);
-	for (int i = 1; i < indizes.size(); i++) {
-		double l = TBVectorData::calculateDistance( &bb[indizes[i].first],  &bb[indizes[i].second]);
-		if (l < l_current) {
-			access_street = indizes[i];
-			l_current = l;
+			bbNodesClosest.insert(index);
 		}
 	}
 
-	DM::Logger(DM::Debug) << bb[access_street.first].getX() << " " << bb[access_street.first].getY();
-	DM::Logger(DM::Debug) << bb[access_street.second].getX() << " " << bb[access_street.second].getY();
-	double angel = TBVectorData::AngelBetweenVectors(DM::Node(0,-1,0), bb[access_street.second]-bb[access_street.first])*180./M_PI;
+	//Street Access Preferation of short side
+	double current_l = -1;
+	int start = -1;
+	int end = -1;
+	for (int i = 1; i < bb.size()+1; i++) {
+		int id_start = i-1;
+		int id_end = i;
+		if (i ==  bb.size())
+			id_end = 0;
+		//check if is street edge
+		if (bbNodesClosest.find(id_start) == bbNodesClosest.end() ||  bbNodesClosest.find(id_end) == bbNodesClosest.end() )
+			continue;
+		double l = TBVectorData::calculateDistance(&bb[id_start], &bb[id_end]);
+		if (current_l < 0 || current_l > l) {
+			current_l = l;
+			start = id_start;
+			end = id_end;
+		}
 
-	DM::Node n = TBVectorData::NormalVector(DM::Node(0,-1,0), bb[access_street.second]-bb[access_street.first]); //directcos is 0 in + and - y direction.
-	if (n.getZ() < 0) {
-		angel+=180;
 	}
 
-	DM::Logger(DM::Debug) << "direct angel " << angel;
+	if (start == -1 || end == -1) {
+		DM::Logger(DM::Standard) << "No Streets found";
+		return std::numeric_limits<double>::quiet_NaN();
+	}
+
+
+	DM::Logger(DM::Debug) << bb[start].getX() << " " << bb[start].getY();
+	DM::Logger(DM::Debug) << bb[end].getX() << " " << bb[end].getY();
+	DM::Node dN = bb[end]-bb[start];
+	double angel = TBVectorData::AngelBetweenVectors(DM::Node(1,0,0), dN)*180./M_PI;
+
+	if (dN.getY() < 0)
+		angel = 360 - angel;
+
 
 	return angel;
 }

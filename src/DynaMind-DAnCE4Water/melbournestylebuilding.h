@@ -60,6 +60,7 @@ public:
 		std::vector<std::pair<std::string, double> > translateSwitch(double l, std::vector<std::pair<std::string, split_val> > splits);
 		void createBuilding(DM::System *sys, DM::Face *f, DM::View v);
 		std::vector<DM::Face *> intersectFaces(DM::System * sys, std::vector<DM::Face *> faces, std::string type);
+		std::vector<DM::Edge *> findStreets(DM::System* city, DM::Face* parcel);
 };
 
 #endif // MELBOURNESTYLEBUILDING_H

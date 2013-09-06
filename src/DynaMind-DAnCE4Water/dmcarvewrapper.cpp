@@ -51,17 +51,23 @@ carve::mesh::MeshSet<3> * DMCarveWrapper::FacesToMesh(std::vector<DM::Face*> fac
 			}
 		}
 	}
-	//Logger(Debug) << "Object";
 	foreach (DM::Face * f, faces) {
 		std::vector<int> face;
-		//Logger(Debug) << "Face";
 		foreach (DM::Node * n, f->getNodePointers()) {
 			face.push_back(dm_index[n]);
+			cout << fixed;
+			std::cout << "i "<< dm_index[n] << "/" << n->getX() << "/"<< n->getY() << "/"<< n->getZ() << std::endl;
+
+
+
 		}
+		std::cout << face.size() << std::endl;
 		data.addFace(face.begin(), face.end());
 	}
-	return  new carve::mesh::MeshSet<3>(data.points, data.getFaceCount(), data.faceIndices);
+	carve::mesh::MeshSet<3> * m = new carve::mesh::MeshSet<3>(data.points, data.getFaceCount(), data.faceIndices);
 
+	std::cout << "done m" << std::endl;
+	return  m;
 }
 
 std::vector<DM::Face*> DMCarveWrapper::MeshToFace(DM::System * sys, carve::mesh::MeshSet<3> * mesh) {
