@@ -579,11 +579,13 @@ namespace carve {
           TriangulationData &data;
           std::vector<VertexInfo *> queue;
 
-          void checkheap() {
-#ifdef __GNUC__
-            CARVE_ASSERT(std::__is_heap(queue.begin(), queue.end(), order_by_score()));
+		  void checkheap() {
+#if defined(__GNUC__) && !defined(__clang__)
+			CARVE_ASSERT(std::__is_heap(queue.begin(), queue.end(), order_by_score()));
+#elif defined(__clang__) && defined(_LIBCPP_VERSION)
+			CARVE_ASSERT(std::is_heap(queue.begin(), queue.end(), order_by_score()));
 #endif
-          }
+		  }
 
         public:
           EarQueue(TriangulationData &_data) : data(_data), queue() {
